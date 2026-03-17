@@ -5,7 +5,7 @@ $servername = getenv("MYSQLHOST");
 $username   = getenv("MYSQLUSER");
 $password   = getenv("MYSQLPASSWORD");
 $dbname     = getenv("MYSQLDATABASE");
-$port       = (int)(getenv("MYSQLPORT") ?: 3306);
+$port       = (int)(getenv("MYSQLPORT") ?: 33598);
 
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
 $conn->set_charset("utf8mb4");
