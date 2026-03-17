@@ -14,11 +14,8 @@ if (!$traker_id) {
 
 try {
     $pdo  = db_conn_pdo();
-
-    // Busca el auto_id desde rutas usando traker_id
-    // luego trae imagen_cloud de autos
     $stmt = $pdo->prepare("
-        SELECT a.imagen_cloud 
+        SELECT a.imagen_cloud
         FROM rutas r
         JOIN autos a ON a.id_unidad = r.auto_id
         WHERE r.traker_id = ?
