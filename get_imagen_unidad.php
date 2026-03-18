@@ -13,7 +13,7 @@ if (!$traker_id) {
 }
 
 try {
-$conn = db_conn(); // mysqli
+$conn = db_conn(); 
 
 $stmt = $conn->prepare("
     SELECT a.imagen_cloud
