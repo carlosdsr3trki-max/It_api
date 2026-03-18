@@ -13,17 +13,20 @@ if (!$traker_id) {
 }
 
 try {
-    $pdo  = db_conn_pdo();
-    $stmt = $pdo->prepare("
-        SELECT a.imagen_cloud
-        FROM rutas r
-        JOIN autos a ON a.id_unidad = r.auto_id
-        WHERE r.traker_id = ?
-        AND r.auto_id IS NOT NULL
-        LIMIT 1
-    ");
-    $stmt->execute([$traker_id]);
-    $row = $stmt->fetch();
+$conn = db_conn(); // mysqli
+
+$stmt = $conn->prepare("
+    SELECT a.imagen_cloud
+    FROM rutas r
+    JOIN autos a ON a.id_unidad = r.auto_id
+    WHERE r.traker_id = ?
+    AND r.auto_id IS NOT NULL
+    LIMIT 1
+");
+$stmt->bind_param("s", $traker_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
 
     if (!$row || empty($row["imagen_cloud"])) {
         echo json_encode(["status" => "error", "msg" => "Sin imagen"]);
