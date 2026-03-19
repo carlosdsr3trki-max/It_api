@@ -32,7 +32,7 @@ if ($correo === "" || $pass === "") {
   exit;
 }
 
-$stmt = $conn->prepare("SELECT id, traker_id, password FROM repartidores_registro WHERE correo = ? LIMIT 1");
+$stmt = $conn->prepare("SELECT id, traker_id, password, nombre, telefono, apellido FROM repartidores_registro WHERE correo = ? LIMIT 1");
 $stmt->bind_param("s", $correo);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -56,13 +56,15 @@ if ($res && $res->num_rows === 1) {
     $ins->execute();
     $ins->close();
 
-    echo json_encode([
-      "status" => "success",
-      "id" => $row["id"],
-      "traker_id" => $row["traker_id"],
-      "token" => $token,
-      "expires_at" => $expiresAt
-    ]);
+echo json_encode([
+    "status"     => "success",
+    "id"         => $row["id"],
+    "traker_id"  => $row["traker_id"],
+    "token"      => $token,
+    "expires_at" => $expiresAt,
+    "nombre"     => $row["nombre"],     // ← agrega
+    "telefono"   => $row["telefono"]    // ← agrega
+]);
   } else {
     http_response_code(401);
     echo json_encode(["status"=>"fail","msg"=>"Credenciales incorrectas"]);
