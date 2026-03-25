@@ -16,7 +16,7 @@ if ($correo === "" || $pass === "") {
 
 $stmt = $conn->prepare("
     SELECT id, traker_id, password, nombre, telefono, apellido 
-    FROM repartidores 
+    FROM repartidores_registro
     WHERE correo = ? LIMIT 1
 ");
 $stmt->bind_param("s", $correo);

@@ -37,7 +37,7 @@ $chk->close();
 $hash = password_hash($clave, PASSWORD_DEFAULT);
 
 $stmt = $conn->prepare("
-    INSERT INTO repartidores (nombre, apellido, telefono, correo, password, traker_id)
+    INSERT INTO repartidores_registro (nombre, apellido, telefono, correo, password, traker_id)
     VALUES (?, ?, ?, ?, ?, ?)
 ");
 $stmt->bind_param("ssssss", $nombre, $apellido, $telefono, $correo, $hash, $traker_id);
