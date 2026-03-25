@@ -1,77 +1,60 @@
 <?php
 header("Content-Type: application/json; charset=utf-8");
 require_once __DIR__ . "/auth_lib.php";
+require_once __DIR__ . "/db.php";
 
-$servername = getenv("MYSQLHOST");
-$username   = getenv("MYSQLUSER");
-$password   = getenv("MYSQLPASSWORD");
-$dbname     = getenv("MYSQLDATABASE");
-$port       = getenv("MYSQLPORT");
+$conn = db_conn();
 
-$conn = new mysqli($servername, $username, $password, $dbname, (int)$port);
-$conn->set_charset("utf8mb4");
-
-if ($conn->connect_error) {
-    die("DB fail: " . $conn->connect_error);
-}
-$conn = new mysqli($servername, $username, $password, $dbname);
-$conn->set_charset("utf8mb4");
-
-if ($conn->connect_error) {
-  http_response_code(500);
-  echo json_encode(["status"=>"error","msg"=>"DB fail"]);
-  exit;
-}
-
-$correo = trim($_POST["correo"] ?? "");
-$pass   = $_POST["password"] ?? "";
+$correo = trim($_POST["correo"]  ?? "");
+$pass   = $_POST["password"]     ?? "";
 
 if ($correo === "" || $pass === "") {
-  http_response_code(400);
-  echo json_encode(["status"=>"fail","msg"=>"Ingresa correo y contraseña"]);
-  exit;
+    http_response_code(400);
+    echo json_encode(["status" => "fail", "msg" => "Ingresa correo y contraseña"]);
+    exit;
 }
 
-$stmt = $conn->prepare("SELECT id, traker_id, password, nombre, telefono, apellido FROM repartidores_registro WHERE correo = ? LIMIT 1");
+$stmt = $conn->prepare("
+    SELECT id, traker_id, password, nombre, telefono, apellido 
+    FROM repartidores 
+    WHERE correo = ? LIMIT 1
+");
 $stmt->bind_param("s", $correo);
 $stmt->execute();
 $res = $stmt->get_result();
 
 if ($res && $res->num_rows === 1) {
-  $row = $res->fetch_assoc();
+    $row = $res->fetch_assoc();
 
-  if (password_verify($pass, $row["password"])) {
+    if (password_verify($pass, $row["password"])) {
+        $token        = make_token();
+        $tokenHash    = hash_token($token);
+        $repartidorId = (int)$row["id"];
+        $expiresAt    = (new DateTime("+30 days"))->format("Y-m-d H:i:s");
+        $deviceId     = substr(trim($_POST["device_id"] ?? ""), 0, 100);
 
-    // ✅ Crear token + guardar sesión (30 días)
-    $token = make_token();
-    $tokenHash = hash_token($token);
+        $ins = $conn->prepare("INSERT INTO sesiones (repartidor_id, token_hash, expires_at, device_id) VALUES (?, ?, ?, ?)");
+        $ins->bind_param("isss", $repartidorId, $tokenHash, $expiresAt, $deviceId);
+        $ins->execute();
+        $ins->close();
 
-    $repartidorId = (int)$row["id"];
-    $expiresAt = (new DateTime("+30 days"))->format("Y-m-d H:i:s");
-
-    $deviceId = substr(trim($_POST["device_id"] ?? ""), 0, 100);
-
-    $ins = $conn->prepare("INSERT INTO sesiones (repartidor_id, token_hash, expires_at, device_id) VALUES (?, ?, ?, ?)");
-    $ins->bind_param("isss", $repartidorId, $tokenHash, $expiresAt, $deviceId);
-    $ins->execute();
-    $ins->close();
-
-echo json_encode([
-    "status"     => "success",
-    "id"         => $row["id"],
-    "traker_id"  => $row["traker_id"],
-    "token"      => $token,
-    "expires_at" => $expiresAt,
-    "nombre"     => $row["nombre"],     // ← agrega
-    "telefono"   => $row["telefono"]    // ← agrega
-]);
-  } else {
-    http_response_code(401);
-    echo json_encode(["status"=>"fail","msg"=>"Credenciales incorrectas"]);
-  }
+        echo json_encode([
+            "status"     => "success",
+            "id"         => $row["id"],
+            "traker_id"  => $row["traker_id"],
+            "token"      => $token,
+            "expires_at" => $expiresAt,
+            "nombre"     => $row["nombre"],
+            "telefono"   => $row["telefono"],
+            "apellido"   => $row["apellido"]
+        ]);
+    } else {
+        http_response_code(401);
+        echo json_encode(["status" => "fail", "msg" => "Credenciales incorrectas"]);
+    }
 } else {
-  http_response_code(401);
-  echo json_encode(["status"=>"fail","msg"=>"Credenciales incorrectas"]);
+    http_response_code(401);
+    echo json_encode(["status" => "fail", "msg" => "Credenciales incorrectas"]);
 }
 
 $stmt->close();
