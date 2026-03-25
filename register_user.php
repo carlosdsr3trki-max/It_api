@@ -23,7 +23,7 @@ if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-$chk = $conn->prepare("SELECT id FROM repartidores WHERE correo = ? LIMIT 1");
+$chk = $conn->prepare("SELECT id FROM repartidores_registro WHERE correo = ? LIMIT 1");
 $chk->bind_param("s", $correo);
 $chk->execute();
 $chkRes = $chk->get_result();
