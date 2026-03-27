@@ -23,7 +23,7 @@ if (!$id_ruta || $km_inicio === null || $km_inicio === "") {
 }
 
 try {
-    $check = $conn->prepare("SELECT id FROM kilometros WHERE id_ruta = ? LIMIT 1");
+    $check = $conn->prepare("SELECT id FROM kilometraje WHERE id_ruta = ? LIMIT 1");
     $check->bind_param("i", $id_ruta);
     $check->execute();
     $row = $check->get_result()->fetch_assoc();
