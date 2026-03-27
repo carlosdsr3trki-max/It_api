@@ -30,7 +30,7 @@ if (!$id_ruta || $km_inicio === null || $km_inicio === "") {
 
 try {
     // revisa si ya existe
-    $check = $conn->prepare("SELECT id FROM kilometros WHERE id_ruta = ? LIMIT 1");
+    $check = $conn->prepare("SELECT id FROM kilometraje WHERE id_ruta = ? LIMIT 1");
     $check->bind_param("i", $id_ruta);
     $check->execute();
     $res = $check->get_result();
@@ -39,7 +39,7 @@ try {
 
     if ($row) {
         $stmt = $conn->prepare("
-            UPDATE kilometros
+            UPDATE kilometraje
             SET km_inicio = ?
             WHERE id_ruta = ?
         ");
@@ -53,7 +53,7 @@ try {
         ]);
     } else {
         $stmt = $conn->prepare("
-            INSERT INTO kilometros (id_ruta, km_inicio, created_at)
+            INSERT INTO kilometraje (id_ruta, km_inicio, created_at)
             VALUES (?, ?, NOW())
         ");
         $stmt->bind_param("id", $id_ruta, $km_inicio);
