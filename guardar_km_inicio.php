@@ -14,15 +14,35 @@ try {
 
 $id_ruta   = $_POST["id_ruta"]   ?? null;
 $km_inicio = $_POST["km_inicio"] ?? null;
-$auto_id   = $_POST["auto_id"]   ?? null; // ✅ nuevo
+$km_fin    = $_POST["km_fin"]    ?? null;
+$auto_id   = $_POST["auto_id"]   ?? null;
 
-if (!$id_ruta || $km_inicio === null || $km_inicio === "") {
+if (!$id_ruta) {
     http_response_code(400);
-    echo json_encode(["status" => "error", "msg" => "Faltan datos"]);
+    echo json_encode(["status" => "error", "msg" => "Falta id_ruta"]);
     exit;
 }
 
 try {
+
+    // ── Flujo km_fin (solo actualiza ese campo) ──────────────
+    if ($km_fin !== null && $km_fin !== "") {
+        $stmt = $conn->prepare("UPDATE kilometraje SET km_fin = ? WHERE id_ruta = ?");
+        $stmt->bind_param("di", $km_fin, $id_ruta);
+        $stmt->execute();
+        $stmt->close();
+        $conn->close();
+        echo json_encode(["status" => "ok", "msg" => "km_fin guardado"]);
+        exit;
+    }
+
+    // ── Flujo km_inicio ──────────────────────────────────────
+    if ($km_inicio === null || $km_inicio === "") {
+        http_response_code(400);
+        echo json_encode(["status" => "error", "msg" => "Faltan datos"]);
+        exit;
+    }
+
     $check = $conn->prepare("SELECT id FROM kilometraje WHERE id_ruta = ? LIMIT 1");
     $check->bind_param("i", $id_ruta);
     $check->execute();
@@ -30,25 +50,16 @@ try {
     $check->close();
 
     if ($row) {
-        $stmt = $conn->prepare("
-            UPDATE kilometraje
-            SET km_inicio = ?, auto_id = ?
-            WHERE id_ruta = ?
-        ");
-        $stmt->bind_param("dsi", $km_inicio, $auto_id, $id_ruta); // ✅
+        $stmt = $conn->prepare("UPDATE kilometraje SET km_inicio = ?, auto_id = ? WHERE id_ruta = ?");
+        $stmt->bind_param("dsi", $km_inicio, $auto_id, $id_ruta);
         $stmt->execute();
         $stmt->close();
-
         echo json_encode(["status" => "ok", "msg" => "Kilometraje actualizado"]);
     } else {
-        $stmt = $conn->prepare("
-            INSERT INTO kilometraje (id_ruta, km_inicio, auto_id, created_at)
-            VALUES (?, ?, ?, NOW())
-        ");
-        $stmt->bind_param("ids", $id_ruta, $km_inicio, $auto_id); // ✅
+        $stmt = $conn->prepare("INSERT INTO kilometraje (id_ruta, km_inicio, auto_id, created_at) VALUES (?, ?, ?, NOW())");
+        $stmt->bind_param("ids", $id_ruta, $km_inicio, $auto_id);
         $stmt->execute();
         $stmt->close();
-
         echo json_encode(["status" => "ok", "msg" => "Kilometraje guardado"]);
     }
 
