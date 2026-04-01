@@ -91,8 +91,8 @@ if (!isset($cloudinary["secure_url"])) {
 $foto_url = $cloudinary["secure_url"];
 
 // ─── Guardar en BD ─────────────────────────────────────────────────────────
-$col_foto  = $tipo === "inicio" ? "foto_inicio_url" : "foto_fin_url";
-$col_form  = $tipo === "inicio" ? "formInicio"      : "formFinal";
+$col_foto = $tipo === "inicio" ? "foto_inicio_url" : "foto_fin_url";
+$col_form = $tipo === "inicio" ? "formInicio"      : "formFinal";
 
 $stmt = $conn->prepare(
     "INSERT INTO gasolina_evidencias (id_ruta, id_unidad, $col_foto, $col_form)
@@ -102,18 +102,16 @@ $stmt = $conn->prepare(
         $col_form = VALUES($col_form)"
 );
 
-$stmt->bind_param("iiss", $id_ruta, $id_unidad, $foto_url, $estado_tanque);
-
-$stmt->bind_param("iis", $id_ruta, $id_unidad, $foto_url);
+$stmt->bind_param("iiss", $id_ruta, $id_unidad, $foto_url, $estado_tanque);  // ← solo este
 
 if ($stmt->execute()) {
-echo json_encode([
-    "status"        => "success",
-    "msg"           => "Foto de gasolina ($tipo) guardada",
-    "foto_url"      => $foto_url,
-    "tipo"          => $tipo,
-    "estado_tanque" => $estado_tanque  // ← NUEVO
-]);
+    echo json_encode([
+        "status"        => "success",
+        "msg"           => "Foto de gasolina ($tipo) guardada",
+        "foto_url"      => $foto_url,
+        "tipo"          => $tipo,
+        "estado_tanque" => $estado_tanque
+    ]);
 } else {
     http_response_code(500);
     echo json_encode(["status" => "error", "msg" => $stmt->error]);
