@@ -21,6 +21,7 @@ try {
 $id_ruta       = $_POST["id_ruta"]       ?? null;
 $id_unidad     = $_POST["id_unidad"]     ?? null;
 $estado_tanque = $_POST["estado_tanque"] ?? null;
+$gas_rut       = $_POST["gas_rut"]       ?? null;
 
 if (!$id_ruta || !$id_unidad) {
     http_response_code(400);
@@ -96,10 +97,10 @@ if ($existe) {
     // UPDATE
     $stmt = $conn->prepare(
         "UPDATE gasolina_evidencias
-         SET foto_fin_url = ?, formFinal = ?
+         SET foto_fin_url = ?, formFinal = ?, gas_rut = ?
          WHERE id_ruta = ?"
     );
-    $stmt->bind_param("ssi", $foto_url, $estado_tanque, $id_ruta);
+    $stmt->bind_param("sssi", $foto_url, $estado_tanque, $gas_rut, $id_ruta);
 } else {
     // INSERT (primera vez)
     $stmt = $conn->prepare(
@@ -114,7 +115,8 @@ if ($stmt->execute()) {
         "status"        => "success",
         "msg"           => $existe ? "Registro actualizado" : "Registro creado",
         "foto_url"      => $foto_url,
-        "estado_tanque" => $estado_tanque
+        "estado_tanque" => $estado_tanque,
+        "gas_rut"       => $gas_rut
     ]);
 } else {
     http_response_code(500);
