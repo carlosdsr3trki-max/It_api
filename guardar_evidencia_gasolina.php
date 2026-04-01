@@ -107,12 +107,13 @@ $stmt->bind_param("iiss", $id_ruta, $id_unidad, $foto_url, $estado_tanque);
 $stmt->bind_param("iis", $id_ruta, $id_unidad, $foto_url);
 
 if ($stmt->execute()) {
-    echo json_encode([
-        "status"   => "success",
-        "msg"      => "Foto de gasolina ($tipo) guardada",
-        "foto_url" => $foto_url,
-        "tipo"     => $tipo
-    ]);
+echo json_encode([
+    "status"        => "success",
+    "msg"           => "Foto de gasolina ($tipo) guardada",
+    "foto_url"      => $foto_url,
+    "tipo"          => $tipo,
+    "estado_tanque" => $estado_tanque  // ← NUEVO
+]);
 } else {
     http_response_code(500);
     echo json_encode(["status" => "error", "msg" => $stmt->error]);
