@@ -25,11 +25,35 @@ if (!$id_ruta) {
 
 try {
 
-    // ── Flujo km_fin (solo actualiza ese campo) ──────────────
+    // ── Flujo km_fin ─────────────────────────────────────────
     if ($km_fin !== null && $km_fin !== "") {
+
+        $km_fin_val = floatval($km_fin); // ← convierte string a número correctamente
+
         $stmt = $conn->prepare("UPDATE kilometraje SET km_fin = ? WHERE id_ruta = ?");
-        $stmt->bind_param("di", $km_fin, $id_ruta);
-        $stmt->execute();
+
+        if (!$stmt) {
+            echo json_encode(["status" => "error", "msg" => "Prepare failed: " . $conn->error]);
+            exit;
+        }
+
+        $stmt->bind_param("di", $km_fin_val, $id_ruta);
+
+        if (!$stmt->execute()) {
+            echo json_encode(["status" => "error", "msg" => "Execute failed: " . $stmt->error]);
+            $stmt->close();
+            $conn->close();
+            exit;
+        }
+
+        // ← CRÍTICO: verifica que realmente actualizó una fila
+        if ($stmt->affected_rows === 0) {
+            echo json_encode(["status" => "error", "msg" => "No se encontró id_ruta=$id_ruta en kilometraje"]);
+            $stmt->close();
+            $conn->close();
+            exit;
+        }
+
         $stmt->close();
         $conn->close();
         echo json_encode(["status" => "ok", "msg" => "km_fin guardado"]);
@@ -43,6 +67,8 @@ try {
         exit;
     }
 
+    $km_inicio_val = floatval($km_inicio); // ← igual aquí
+
     $check = $conn->prepare("SELECT id FROM kilometraje WHERE id_ruta = ? LIMIT 1");
     $check->bind_param("i", $id_ruta);
     $check->execute();
@@ -51,13 +77,13 @@ try {
 
     if ($row) {
         $stmt = $conn->prepare("UPDATE kilometraje SET km_inicio = ?, auto_id = ? WHERE id_ruta = ?");
-        $stmt->bind_param("dsi", $km_inicio, $auto_id, $id_ruta);
+        $stmt->bind_param("dsi", $km_inicio_val, $auto_id, $id_ruta);
         $stmt->execute();
         $stmt->close();
         echo json_encode(["status" => "ok", "msg" => "Kilometraje actualizado"]);
     } else {
         $stmt = $conn->prepare("INSERT INTO kilometraje (id_ruta, km_inicio, auto_id, created_at) VALUES (?, ?, ?, NOW())");
-        $stmt->bind_param("ids", $id_ruta, $km_inicio, $auto_id);
+        $stmt->bind_param("ids", $id_ruta, $km_inicio_val, $auto_id);
         $stmt->execute();
         $stmt->close();
         echo json_encode(["status" => "ok", "msg" => "Kilometraje guardado"]);
