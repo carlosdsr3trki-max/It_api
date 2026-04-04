@@ -2,7 +2,6 @@
 header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 
-// ─── Credenciales Cloudinary ───────────────────────────────────────────────
 $CLOUD_NAME = getenv("CLOUD_NAME");
 $API_KEY    = getenv("CLOUDINARY_API_KEY");
 $API_SECRET = getenv("CLOUDINARY_API_SECRET");
@@ -17,15 +16,21 @@ try {
     exit;
 }
 
-// ─── Parámetros requeridos ─────────────────────────────────────────────────
 $id_ruta       = $_POST["id_ruta"]       ?? null;
 $id_unidad     = $_POST["id_unidad"]     ?? null;
+$tipo          = $_POST["tipo"]          ?? null;
 $estado_tanque = $_POST["estado_tanque"] ?? null;
-$gas_rut       = $_POST["gas_rut"]       ?? null;
+$gas_rut       = $_POST["gas_rut"]       ?? "";
 
-if (!$id_ruta || !$id_unidad) {
+if (!$id_ruta || !$id_unidad || !$tipo) {
     http_response_code(400);
-    echo json_encode(["status" => "error", "msg" => "Faltan parámetros: id_ruta, id_unidad"]);
+    echo json_encode(["status" => "error", "msg" => "Faltan parámetros: id_ruta, id_unidad, tipo"]);
+    exit;
+}
+
+if (!in_array($tipo, ["inicio", "fin"])) {
+    http_response_code(400);
+    echo json_encode(["status" => "error", "msg" => "tipo debe ser 'inicio' o 'fin'"]);
     exit;
 }
 
@@ -35,7 +40,6 @@ if (!isset($_FILES["foto"]) || $_FILES["foto"]["error"] !== UPLOAD_ERR_OK) {
     exit;
 }
 
-// ─── Validación MIME ───────────────────────────────────────────────────────
 $allowed = ["image/jpeg", "image/png", "image/webp"];
 $mime    = mime_content_type($_FILES["foto"]["tmp_name"]);
 
@@ -47,7 +51,7 @@ if (!in_array($mime, $allowed)) {
 
 // ─── Subir a Cloudinary ────────────────────────────────────────────────────
 $timestamp = time();
-$public_id = "gasolina/ruta_" . intval($id_ruta) . "_unidad_" . intval($id_unidad) . "_fin_" . date("Ymd_His");
+$public_id = "gasolina/ruta_" . intval($id_ruta) . "_unidad_" . intval($id_unidad) . "_" . $tipo . "_" . date("Ymd_His");
 $signature = sha1("public_id=" . $public_id . "&timestamp=" . $timestamp . $API_SECRET);
 
 $ch = curl_init();
@@ -85,43 +89,64 @@ if (!isset($cloudinary["secure_url"])) {
 $foto_url = $cloudinary["secure_url"];
 
 // ─── Guardar en BD ─────────────────────────────────────────────────────────
-// 1. ¿Ya existe una fila para este id_ruta?
-$check = $conn->prepare("SELECT id FROM gasolina_evidencias WHERE id_ruta = ? LIMIT 1");
-$check->bind_param("i", $id_ruta);
-$check->execute();
-$check->store_result();
-$existe = $check->num_rows > 0;
-$check->close();
+if ($tipo === "inicio") {
 
-if ($existe) {
-    // UPDATE
     $stmt = $conn->prepare(
-        "UPDATE gasolina_evidencias
-         SET foto_fin_url = ?, formFinal = ?, gas_rut = ?
-         WHERE id_ruta = ?"
+        "INSERT INTO gasolina_evidencias
+            (id_ruta, id_unidad, foto_inicio_url, formInicio)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+            foto_inicio_url = VALUES(foto_inicio_url),
+            formInicio      = VALUES(formInicio)"
     );
-    $stmt->bind_param("sssi", $foto_url, $estado_tanque, $gas_rut, $id_ruta);
-} else {
-    // INSERT (primera vez)
-    $stmt = $conn->prepare(
-        "INSERT INTO gasolina_evidencias (id_ruta, id_unidad, foto_fin_url, formFinal)
-         VALUES (?, ?, ?, ?)"
-    );
+
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "msg" => "Prepare failed: " . $conn->error]);
+        exit;
+    }
+
     $stmt->bind_param("iiss", $id_ruta, $id_unidad, $foto_url, $estado_tanque);
+
+} else {
+
+    $stmt = $conn->prepare(
+        "INSERT INTO gasolina_evidencias
+            (id_ruta, id_unidad, foto_fin_url, formFinal, gas_rut)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+            foto_fin_url = VALUES(foto_fin_url),
+            formFinal    = VALUES(formFinal),
+            gas_rut      = VALUES(gas_rut)"
+    );
+
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(["status" => "error", "msg" => "Prepare failed: " . $conn->error]);
+        exit;
+    }
+
+    $stmt->bind_param("iisss", $id_ruta, $id_unidad, $foto_url, $estado_tanque, $gas_rut);
 }
 
-if ($stmt->execute()) {
-    echo json_encode([
-        "status"        => "success",
-        "msg"           => $existe ? "Registro actualizado" : "Registro creado",
-        "foto_url"      => $foto_url,
-        "estado_tanque" => $estado_tanque,
-        "gas_rut"       => $gas_rut
-    ]);
-} else {
+if (!$stmt->execute()) {
     http_response_code(500);
-    echo json_encode(["status" => "error", "msg" => $stmt->error]);
+    echo json_encode([
+        "status" => "error",
+        "msg"    => "Execute failed: " . $stmt->error,
+        "errno"  => $stmt->errno
+    ]);
+    exit;
 }
+
+echo json_encode([
+    "status"        => "success",
+    "msg"           => "Foto de gasolina ($tipo) guardada",
+    "foto_url"      => $foto_url,
+    "tipo"          => $tipo,
+    "estado_tanque" => $estado_tanque,
+    "gas_rut"       => $gas_rut
+]);
 
 $stmt->close();
 $conn->close();
