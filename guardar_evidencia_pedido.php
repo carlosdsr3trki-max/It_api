@@ -99,7 +99,7 @@ if (!$stmt) {
     exit;
 }
 
-$stmt->bind_param("iiss", $id_ruta, $cve_pedido, $foto_url, $comentario);
+$stmt->bind_param("isss", $id_ruta, $cve_pedido, $foto_url, $comentario);
 
 if (!$stmt->execute()) {
     http_response_code(500);
