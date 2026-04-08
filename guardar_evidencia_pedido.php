@@ -22,6 +22,7 @@ try {
 $id_ruta    = $_POST["id_ruta"]    ?? null;
 $cve_pedido = $_POST["cve_pedido"] ?? null;
 $comentario = $_POST["comentario"] ?? "";
+$quien_recibe = $_POST["quien_recibe"]  ?? "";  
 
 if (!$id_ruta || !$cve_pedido) {
     http_response_code(400);
@@ -86,11 +87,12 @@ $foto_url = $cloudinary["secure_url"];
 
 // ─── Guardar en BD ─────────────────────────────────────────
 $stmt = $conn->prepare(
-    "INSERT INTO evidencia_pedido (id_ruta, cve_pedido, foto_url, comentario, created_at)
-     VALUES (?, ?, ?, ?, NOW())
+    "INSERT INTO evidencia_pedido (id_ruta, cve_pedido, foto_url, comentario, quien_recibe, created_at)
+     VALUES (?, ?, ?, ?, ?, NOW())
      ON DUPLICATE KEY UPDATE
-        foto_url   = VALUES(foto_url),
-        comentario = VALUES(comentario)"
+        foto_url      = VALUES(foto_url),
+        comentario    = VALUES(comentario),
+        quien_recibe  = VALUES(quien_recibe)"
 );
 
 if (!$stmt) {
@@ -99,7 +101,7 @@ if (!$stmt) {
     exit;
 }
 
-$stmt->bind_param("isss", $id_ruta, $cve_pedido, $foto_url, $comentario);
+$stmt->bind_param("issss", $id_ruta, $cve_pedido, $foto_url, $comentario, $quien_recibe);
 
 if (!$stmt->execute()) {
     http_response_code(500);
