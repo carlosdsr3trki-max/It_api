@@ -54,6 +54,7 @@ $sql = "
         telefono_alm,
         nombre_clie,
         telefono_clie,
+        correo_clie,
         caja
     FROM rutas
     WHERE traker_id = ? AND STAT_RUT = 'N'
