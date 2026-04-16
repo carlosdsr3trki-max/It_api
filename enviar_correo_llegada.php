@@ -1,7 +1,6 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
-
+require __DIR__ . '/vendor/autoload.php';
 use Resend;
 
 header("Content-Type: application/json; charset=utf-8");
