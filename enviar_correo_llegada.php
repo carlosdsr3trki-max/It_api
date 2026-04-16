@@ -17,7 +17,7 @@ if (!$correo) {
     exit;
 }
 
-$apiKey = getenv('re_gbrXXgr8_8bpr28FFE7DmTobogUz1WptL');
+$apiKey = getenv('RESEND_API_KEY');
 
 if (!$apiKey) {
     http_response_code(500);
