@@ -73,9 +73,8 @@ async function main() {
                 const payload = JSON.stringify({ lat, lon, ts: Date.now() })
 
                 // Última posición (expira 5 min)
-                await redis.setEx(`ubicacion:${trakerId}`, 300, payload)
-
-                // Historial del día (expira 24h)
+                await redis.set(`ubicacion:${trakerId}`, payload)
+                    // Historial del día (expira 24h)
                 const hoy = new Date().toISOString().split('T')[0]
                 await redis.lPush(`historial:${trakerId}:${hoy}`, payload)
                 await redis.expire(`historial:${trakerId}:${hoy}`, 86400)
@@ -83,9 +82,8 @@ async function main() {
                 // Marcar para flush a MySQL
                 await redis.sAdd('devices:dirty', trakerId)
                 await redis.hSet(`device:${trakerId}`, { lat, lon, updated_at: Date.now() })
-                await redis.expire(`device:${trakerId}`, 60)
-
-                // Broadcast a todos los clientes conectados
+                await redis.expire(`device:${trakerId}`, 600)
+                    // Broadcast a todos los clientes conectados
                 wss.clients.forEach(client => {
                     if (client.readyState === 1) {
                         client.send(JSON.stringify({
@@ -117,7 +115,7 @@ async function main() {
     })
 
     // ── Flush Redis → MySQL cada 30 segundos ──────────────────
-    setInterval(flushToMySQL, 30000)
+    setInterval(flushToMySQL, 100000)
 
     server.listen(PORT, () => console.log(`🚀 Server en puerto ${PORT}`))
 }
@@ -129,22 +127,48 @@ async function flushToMySQL() {
 
     await redis.del('devices:dirty')
 
-    // Llama al PHP que ya tienes para que haga el INSERT
+    const batch = []
+
     for (const id of devices) {
         const data = await redis.hGetAll(`device:${id}`)
-        if (!data.lat) continue
 
-        try {
-            await fetch(`${URL_API_PHP}/guardar_ubicacion.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ traker_id: id, lat: data.lat, lon: data.lon })
+        if (!data.lat || !data.lon) continue
+
+        batch.push({
+            traker_id: id,
+            lat: data.lat,
+            lon: data.lon
+        })
+    }
+
+    if (!batch.length) return
+
+    try {
+        const response = await fetch(`${URL_API_PHP}/guardar_batch_ubicaciones.php`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ubicaciones: batch
             })
-            console.log(`✔ Flushed ${id}`)
-        } catch (e) {
-            console.error(`✗ Error flush ${id}:`, e.message)
-                // Re-encolar si falló
-            await redis.sAdd('devices:dirty', id)
+        })
+
+        const text = await response.text()
+        console.log('Batch MySQL response:', text)
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${text}`)
+        }
+
+        console.log(`✔ Batch guardado: ${batch.length} ubicaciones`)
+
+    } catch (e) {
+        console.error('✗ Error batch flush:', e.message)
+
+        // Si falla, regresamos los dispositivos a pendientes
+        for (const item of batch) {
+            await redis.sAdd('devices:dirty', item.traker_id)
         }
     }
 }
