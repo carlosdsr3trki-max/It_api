@@ -12,8 +12,12 @@ function db_conn(): mysqli {
 
     if (!$host || !$user || !$name) {
         http_response_code(500);
-        echo json_encode(["status" => "error", "msg" => "DB env missing"]);
-        exit;
+echo json_encode([
+    "host" => getenv("MYSQLHOST"),
+    "user" => getenv("MYSQLUSER"),
+    "db"   => getenv("MYSQLDATABASE")
+]);
+exit;
     }
 
     $conn = mysqli_init();
