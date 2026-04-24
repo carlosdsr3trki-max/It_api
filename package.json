@@ -1,5 +1,5 @@
 {
-    "name": "trki-server",
+    "name": "node-server",
     "version": "1.0.0",
     "main": "server.js",
     "scripts": {
