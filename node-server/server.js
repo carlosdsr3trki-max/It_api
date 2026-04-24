@@ -70,9 +70,19 @@ async function main() {
             // Guardar ubicación
             if (msg.type === 'ubicacion' && trakerId) {
                 const { lat, lon } = msg
-                const payload = JSON.stringify({ lat, lon, ts: Date.now() })
+                const now = new Date()
 
-                // Última posición (expira 5 min)
+                const payload = JSON.stringify({
+                        traker_id: trakerId,
+                        lat: Number(lat),
+                        lon: Number(lon),
+                        timestamp: now.getTime(),
+                        fecha_iso: now.toISOString(),
+                        fecha_mx: now.toLocaleString('es-MX', {
+                            timeZone: 'America/Mexico_City'
+                        })
+                    })
+                    // Última posición (expira 5 min)
                 await redis.set(`ubicacion:${trakerId}`, payload)
                     // Historial del día (expira 24h)
                 const hoy = new Date().toISOString().split('T')[0]
