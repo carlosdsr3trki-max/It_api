@@ -100,7 +100,7 @@ async function main() {
         })
 
         ws.on('close', () => {
-            if (trakerId) redis.del(`ubicacion:${trakerId}`)
+            console.log(`Cliente desconectado: ${trakerId}`)
         })
     })
 
