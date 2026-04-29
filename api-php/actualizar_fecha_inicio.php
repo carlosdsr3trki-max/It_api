@@ -15,11 +15,7 @@ $conn->set_charset("utf8mb4");
 
 if ($conn->connect_error) {
     http_response_code(500);
-    echo json_encode([
-        "status" => "error",
-        "msg"   => "DB fail",
-        "error" => $conn->connect_error
-    ]);
+    echo json_encode(["status" => "error", "msg" => "DB fail", "error" => $conn->connect_error]);
     exit;
 }
 
@@ -27,38 +23,30 @@ $id_ruta = $_POST["id_ruta"] ?? null;
 
 if (!$id_ruta) {
     http_response_code(400);
-    echo json_encode([
-        "status" => "error",
-        "msg"   => "Falta id_ruta"
-    ]);
+    echo json_encode(["status" => "error", "msg" => "Falta id_ruta"]);
     exit;
 }
 
-// ✅ Hora exacta en zona México
 $fecha_hora = date("Y-m-d H:i:s");
 
 $stmt = $conn->prepare("
-    UPDATE fechas_inicio
-    SET fecha_hora = ?
-    WHERE id_ruta = ?
+    INSERT INTO fechas_inicio (id_ruta, fecha_hora)
+    VALUES (?, ?)
 ");
 
-$stmt->bind_param("ss", $fecha_hora, $id_ruta);
+$stmt->bind_param("ss", $id_ruta, $fecha_hora);
 
 if ($stmt->execute()) {
     echo json_encode([
-        "status"         => "success",
-        "msg"            => "Fecha de inicio registrada",
-        "id_ruta"        => $id_ruta,
-        "fecha_hora"     => $fecha_hora,
-        "filas_afectadas"=> $stmt->affected_rows
+        "status"     => "success",
+        "msg"        => "Fecha de inicio registrada",
+        "id_ruta"    => $id_ruta,
+        "fecha_hora" => $fecha_hora,
+        "insert_id"  => $stmt->insert_id
     ]);
 } else {
     http_response_code(500);
-    echo json_encode([
-        "status" => "error",
-        "msg"   => $stmt->error
-    ]);
+    echo json_encode(["status" => "error", "msg" => $stmt->error]);
 }
 
 $stmt->close();
